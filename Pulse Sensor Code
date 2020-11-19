@@ -1,0 +1,29 @@
+from machine import Pin,ADC,PWM
+import os
+import ujson
+from machine import reset,Pin,ADC,PWM
+from time import sleep
+
+
+# A basic loop for reading ADC pin 33.
+def adc_loop(time=1,length=200,verbose=1):
+    adc=ADC(Pin(33))
+    adc.atten(3)
+    print("Read adc from pin 33")
+    x=length/time
+    i=0
+    joe = Pin(2,Pin.OUT)
+    while(i<x):
+        val=adc.read()
+        if (verbose==1):
+            print(val)
+        if (val>3000):
+            joe.value(1)
+        else:
+            joe.value(0)
+        i+=1
+        sleep(time)
+    print('Done')
+   
+adc_loop()
+
