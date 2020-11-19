@@ -1,0 +1,18 @@
+from machine import Pin,ADC,PWM
+import os
+import ujson
+from machine import reset,Pin,ADC,PWM
+from time import sleep
+joe = Pin(2,Pin.OUT)
+
+Alex = PWM(Pin(25))
+Alex.freq(50)
+Alex.duty(77) #High = 57, Low 97
+
+def moveservo(x): 
+    Alex.duty(x)
+    joe.value(1)
+    sleep(2)
+    joe.value(0)
+
+    
