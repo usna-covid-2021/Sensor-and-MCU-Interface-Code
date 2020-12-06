@@ -1,18 +1,23 @@
+# Driver for a Hi-Tec HS-475 HB Servo Motor.
+# By MIDN 1/C Corwin Stites with assistance from Patrick McCorkell (USNA Robotics and Control Engineering).
+# Last Edited: 04DEC20.
+
+#Import necessary libraries
 from machine import Pin,ADC,PWM
 import os
 import ujson
 from machine import reset,Pin,ADC,PWM
 from time import sleep
-joe = Pin(2,Pin.OUT)
 
-Alex = PWM(Pin(25))
-Alex.freq(50)
-Alex.duty(77) #High = 57, Low 97
+light = Pin(2,Pin.OUT) #Declare light pin to light up when motor moves
+motor = PWM(Pin(25)) #Declare PWM pin to control motor
+motor.freq(50) #Set motor frequency
+motor.duty(77) #Set motor position (High = 57, Low 97)
 
-def moveservo(x): 
-    Alex.duty(x)
-    joe.value(1)
-    sleep(2)
-    joe.value(0)
+def moveservo(x): #Function to move motor
+    light.value(1) #Turn light on
+    motor.duty(x) #Move to specified position
+    sleep(2) #Wait 2 seconds
+    light.value(0) #turn light off
 
     
