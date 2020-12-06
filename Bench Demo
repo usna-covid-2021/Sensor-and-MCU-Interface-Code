@@ -1,0 +1,126 @@
+# This is code to run a pulse sensor, ir thermometer, and servo motor for our bench demonstartion.
+# By MIDN 1/C Corwin Stites with assistance from Patrick McCorkell and Dennis Evangelista (USNA Robotics and Control Engineering).
+# Last Edited: 06DEC20.
+
+#Import necessary libraries
+from machine import Pin,ADC,PWM
+import os
+import ujson
+from machine import reset,Pin,ADC,PWM
+from time import sleep
+from stats import stdev
+from machine import I2C as I2C
+import ulab as np
+from ulab import numerical
+
+def takepulse():
+    adc=ADC(Pin(33)) #Declares ADC on pin 33
+    adc.atten(3) #Set input attenuation value
+    time=0.01 #Reading interval (1 ms)
+    length=30 #Reading time (30 s)
+    print("Reading") #Print when starting
+    x=length/time #Calculate counter maximum value
+    hb_counter = 0 #Declare hb counter variable
+    i=0 #Decalre counter variable
+    light = Pin(2,Pin.OUT) #Declare pin for the light
+    repeat_check = 1 #Declare repeat heartbeat read check variable
+    while(i<x): #Loop for specified lenggth
+        val=adc.read() #Read in value from pin
+        if (val>2500): #If heart is beating turn on light
+            light.value(1)
+            if (repeat_check = 1): #Prevent multiple heartbeat reads on one heartbeat
+                print("Heartbeat")
+                hb_counter += 1 #Add to heartbeat count
+                repeat_check = 0 #Reset repeat check
+        else: #Else turn off light
+            light.value(0)
+            repeat_check = 1
+        i+=1 #Cycle through the iteration
+        sleep(time) #Sleep specified wait time
+    print("Done!") #Print when done
+    hb_rate = hb_counter*2
+    print("Your heart rate is " + str(hb_rate) + " BPM")
+    
+def i2c_read(address,register,length):
+    global bus #Decalres bus in the function as a global variable
+    bytedata=bus.readfrom_mem(address,register,length) #Read the register(s) into a byte array
+    returnval=0 #Define the value used to store read data
+    i=length-1 #Create iteration counter
+
+    while(i>=0): #Iterate through the byte array and store as an unsigned integer
+        returnval+=(bytedata[i]<<(8*i)) #Iterate through each byte digit and sum decimal values to store binary data as a decimal
+        i-=1
+    return returnval
+
+def read_object(): #Reads object tempeature in Fahrenheit.
+    return (((i2c_read(90,0x07,2)*0.02)-273)*(9/5)+32)
+
+def poll_data(): #Create function to take the avearge of many temperature values
+    object_data=[]
+    o=0 #Define the counter variables
+    try: #Do this if no error pops up
+        while(o<100): #Define lower limits of the counter
+            obj=read_object()#Read in object temperature
+            if (obj<50)and (obj>-50):
+                o+=1
+                object_data.append(obj)
+            sleep(0.001) #Wait a milisecond.
+    except: #If an error pops up, continue to run
+        pass
+    avg_temp = numerical.mean(object_data) #from average temp from all the good readings
+    return avg_temp #Return average temp value
+    
+def irsensorandservo():
+    motor = PWM(Pin(25)) #Declare PWM pin to control motor
+    motor.freq(50) #Set motor frequency
+    motor.duty(57) #Set motor position (High = 57, Low 97)
+    SCL=Pin(22) #Declare serial clock pin
+    SDA=Pin(23) # Declare serial data pin
+    bus = I2C(sda=SDA,scl=SCL) #Open I2C Serial Port
+    
+    check=1 #Continue to take temperature condition.
+    while(check):
+        sleep(0.1) #Wait
+        temp=(poll_data())#Run the take readings and find average temp and standard deviation function
+        print("Temperature: "+str(temp))
+        motor_pos = 57 #Motor position variable
+        if (temp<90) and (motor_pos<97):#Person's forehead found
+            print("Lifeform not detected - move servo!")
+            motor_pos = motor_pos+5
+            motor.duty(motor_pos) #Set motor position 
+        elif (temp>90):#Person's forehead not found
+            print("Lifeform detected - stop!")
+            check = 0 #Stop loop
+        print("Your temperatue is " +str(temp)+ "Degrees F.") #Print temp
+        else:
+           print("Error, try again!")  #If thes test failed
+        
+def main():            
+    print("Welcome to the Bench Demo!") #Print when starting
+    print("Please Position Your Finger on the Pulse Sensor") 
+    sleep(5) #Wait for user to position finger
+    print("Starting in...") #Countdown
+    print("3")
+    sleep(1)
+    print("2")
+    sleep(1)
+    print("1")
+    sleep(1)
+    takepulse() #Call the pulse taking function
+
+    print("Please Position the IR Sensor and Servo in Front of Forehead") 
+    sleep(10) #Wait for user to position servo
+    print("Starting in...") #Countdown
+    print("3")
+    sleep(1)
+    print("2")
+    sleep(1)
+    print("1")
+    sleep(1)
+    irsensorandservo() #Call servo miving and temp reading function
+    
+main() #Call main function
+    
+
+
+
