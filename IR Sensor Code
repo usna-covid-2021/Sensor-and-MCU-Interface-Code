@@ -1,0 +1,72 @@
+# Driver for MLX90614 IR sensor from Sparkfun.
+# By MIDN 1/C Corwin Stites with assistance from Patrick McCorkell and Dennis Evangelista (USNA Robotics and Control Engineering).
+# Last Edited: 04DEC20.
+
+#Import necessary libraries
+from time import sleep
+from stats import stdev
+from machine import Pin
+from machine import I2C as I2C
+
+SCL=Pin(22) #Declare serial clock pin
+SDA=Pin(23) # Declare serial data pin
+bus = I2C(sda=SDA,scl=SCL) #Open I2C Serial Port
+
+def i2c_read(address,register,length):
+    global bus #Decalres bus in the function as a global variable
+    bytedata=bus.readfrom_mem(address,register,length) #Read the register(s) into a byte array
+    returnval=0 #Define the value used to store read data
+    i=length-1 #Create iteration counter
+
+    while(i>=0): #Iterate through the byte array and store as an unsigned integer
+        returnval+=(bytedata[i]<<(8*i)) #Iterate through each byte digit and sum decimal values to store binary data as a decimal
+        i-=1
+    return returnval
+
+def read_ambient(): #Reads ambient tempeature in Celcius.
+    return ((i2c_read(90,0x06,2)*0.02)-273)
+
+def read_object(): #Reads object tempeature in Celcius.
+    return ((i2c_read(90,0x07,2)*0.02)-273)
+
+def poll_data(): #Create function to take the avearge of many temperature values
+    dictionary = {"ambient":0,"object":0} #Create dictionary to store ambient and object temperature data values
+    ambient_data=[] #Decalre arrays for the ambient and object temperature data
+    object_data=[]
+    a=0 #Define the counter variables
+    o=0
+    try: #Do this if no error pops up
+        while((a<100) or (o<100)): #Define lower limits of the counter
+            amb=read_ambient()#Read in ambient temperature
+            obj=read_object()#Read in object temperature
+            if (amb<50) and (amb>-50):#Make sure it's not a too high or low junk value then save it into the array.
+                a+=1
+                ambient_data.append(amb)#Make sure it's not a too high or low junk value then save it into the array.
+            if (obj<50)and (obj>-50):
+                o+=1
+                object_data.append(obj)
+            if ((a >150) or (o>150)): #Define upper limits of the counter, if one gets too high make them big to break the loop
+                a=9000
+                o=9000
+            sleep(0.001) #Wait a milisecond.
+    except: #If an error pops up, continue to run
+        pass
+    dictionary["ambient"]=stdev(ambient_data) #Find the mean and standard deviation of all th values taken.
+    dictionary["object"]=stdev(object_data)
+    return dictionary #Return those values from the function
+
+def check_quit():#Function to easily turn on/off main
+    return 1
+
+def main():
+    data={'ambient':0,'object':0} #Define data variable as average temps and tandard deviations
+    q=1
+    while(q):
+        q=check_quit() #Check easy on/off condition
+        sleep(0.1) #Wait
+        data=(poll_data())#Run the take readings and find average temp and standard deviation function
+        print("ambient: "+str(data['ambient']))#Prints average temperatures and standard deviations of data
+        print("object: "+str(data['object']))
+        print()#New line
+
+main() #Call main
