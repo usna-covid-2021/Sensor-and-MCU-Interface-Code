@@ -10,8 +10,11 @@ from machine import reset,Pin,ADC,PWM
 from time import sleep
 from stats import stdev
 from machine import I2C as I2C
-import ulab as np
-from ulab import numerical
+#import ulab as np
+#from ulab import numerical
+
+def my_numerical_mean(l):
+    return sum(l)/len(l)
 
 def takepulse():
     adc=ADC(Pin(33)) #Declares ADC on pin 33
