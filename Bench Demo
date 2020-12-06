@@ -26,12 +26,11 @@ def takepulse():
     repeat_check = 1 #Declare repeat heartbeat read check variable
     while(i<x): #Loop for specified lenggth
         val=adc.read() #Read in value from pin
-        if (val>2500): #If heart is beating turn on light
+        if (val>2500) and (repeat_check = 1): #If heart is beating turn on light and this beat hasn't been read
             light.value(1)
-            if (repeat_check = 1): #Prevent multiple heartbeat reads on one heartbeat
-                print("Heartbeat")
-                hb_counter += 1 #Add to heartbeat count
-                repeat_check = 0 #Reset repeat check
+            print("Heartbeat")
+            hb_counter += 1 #Add to heartbeat count
+            repeat_check = 0 #Reset repeat check
         else: #Else turn off light
             light.value(0)
             repeat_check = 1
@@ -117,7 +116,7 @@ def main():
     sleep(1)
     print("1")
     sleep(1)
-    irsensorandservo() #Call servo miving and temp reading function
+    irsensorandservo() #Call servo moving and temp reading function
     
 main() #Call main function
     
