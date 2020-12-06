@@ -77,12 +77,12 @@ def irsensorandservo():
     SDA=Pin(23) # Declare serial data pin
     bus = I2C(sda=SDA,scl=SCL) #Open I2C Serial Port
     
-    check=1 #Continue to take temperature condition.
+check=1 #Continue to take temperature condition.
+    motor_pos = 57 #Motor position variable
     while(check):
         sleep(0.1) #Wait
         temp=(poll_data())#Run the take readings and find average temp and standard deviation function
         print("Temperature: "+str(temp))
-        motor_pos = 57 #Motor position variable
         if (temp<90) and (motor_pos<97):#Person's forehead found
             print("Lifeform not detected - move servo!")
             motor_pos = motor_pos+5
