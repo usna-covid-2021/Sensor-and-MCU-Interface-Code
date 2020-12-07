@@ -1,6 +1,6 @@
 # This is code to run a pulse sensor, ir thermometer, and servo motor for our bench demonstartion.
 # By MIDN 1/C Corwin Stites with assistance from Patrick McCorkell and Dennis Evangelista (USNA Robotics and Control Engineering).
-# Last Edited: 06DEC20.
+# Last Edited: 07DEC20.
 
 #Import necessary libraries
 from machine import Pin,ADC,PWM
@@ -10,13 +10,15 @@ from machine import reset,Pin,ADC,PWM
 from time import sleep
 from stats import stdev
 from machine import I2C as I2C
-import ulab as np
-from ulab import numerical
+
+SCL=Pin(22) #Declare serial clock pin
+SDA=Pin(23) # Declare serial data pin
+bus = I2C(sda=SDA,scl=SCL) #Open I2C Serial Port
 
 def takepulse():
     adc=ADC(Pin(33)) #Declares ADC on pin 33
     adc.atten(3) #Set input attenuation value
-    time=0.01 #Reading interval (1 ms)
+    time=0.1 #Reading interval (0.1 s)
     length=30 #Reading time (30 s)
     print("Reading") #Print when starting
     x=length/time #Calculate counter maximum value
@@ -26,7 +28,7 @@ def takepulse():
     repeat_check = 1 #Declare repeat heartbeat read check variable
     while(i<x): #Loop for specified lenggth
         val=adc.read() #Read in value from pin
-        if (val>2500) and (repeat_check = 1): #If heart is beating turn on light and this beat hasn't been read
+        if (val>3000) and (repeat_check == 1): #If heart is beating turn on light and this beat hasn't been read
             light.value(1)
             print("Heartbeat")
             hb_counter += 1 #Add to heartbeat count
@@ -52,37 +54,39 @@ def i2c_read(address,register,length):
     return returnval
 
 def read_object(): #Reads object tempeature in Fahrenheit.
-    return (((i2c_read(90,0x07,2)*0.02)-273)*(9/5)+32)
+    return (((i2c_read(90,0x07,2)*0.02)-273.0)*(9.0/5.0)+32.0)
 
 def poll_data(): #Create function to take the avearge of many temperature values
     object_data=[]
     o=0 #Define the counter variables
     try: #Do this if no error pops up
+        temp_sum = 0
         while(o<100): #Define lower limits of the counter
             obj=read_object()#Read in object temperature
-            if (obj<50)and (obj>-50):
+            if (obj<130.0)and (obj>20.0):
                 o+=1
                 object_data.append(obj)
+                temp_sum = temp_sum+obj
             sleep(0.001) #Wait a milisecond.
     except: #If an error pops up, continue to run
         pass
-    avg_temp = numerical.mean(object_data) #from average temp from all the good readings
+    if (len(object_data) == 0):
+        avg_temp = -42
+    else:
+        avg_temp = temp_sum/len(object_data) #from average temp from all the good readings 
     return avg_temp #Return average temp value
     
 def irsensorandservo():
     motor = PWM(Pin(25)) #Declare PWM pin to control motor
     motor.freq(50) #Set motor frequency
     motor.duty(57) #Set motor position (High = 57, Low 97)
-    SCL=Pin(22) #Declare serial clock pin
-    SDA=Pin(23) # Declare serial data pin
-    bus = I2C(sda=SDA,scl=SCL) #Open I2C Serial Port
     
     check=1 #Continue to take temperature condition.
     motor_pos = 57 #Motor position variable
     while(check):
-        sleep(0.1) #Wait
+        sleep(5) #Wait
         temp=(poll_data())#Run the take readings and find average temp and standard deviation function
-        print("Temperature: "+str(temp))
+        print("Temperature: "+str(temp)+ " Degrees F.")
         if (temp<90) and (motor_pos<97):#Person's forehead found
             print("Lifeform not detected - move servo!")
             motor_pos = motor_pos+5
@@ -90,9 +94,10 @@ def irsensorandservo():
         elif (temp>90):#Person's forehead not found
             print("Lifeform detected - stop!")
             check = 0 #Stop loop
-        print("Your temperatue is " +str(temp)+ "Degrees F.") #Print temp
+            print("Your temperatue is " +str(temp)+ " Degrees F.") #Print temp
         else:
            print("Error, try again!")  #If thes test failed
+           check = 0
         
 def main():            
     print("Welcome to the Bench Demo!") #Print when starting
